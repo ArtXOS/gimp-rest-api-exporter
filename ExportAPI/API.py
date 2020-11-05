@@ -86,15 +86,15 @@ class API:
         return response
 
     def __post(self, request: Request) -> requests.Response:
-        response = requests.post(self.__address + request.endpoint, headers=request.headers, timeout=30)
+        response = requests.post(self.__address + request.endpoint, headers=request.headers, data="", timeout=30)
         return response
 
     def __put(self, request: Request) -> requests.Response:
-        response = requests.put(self.__address + request.endpoint, headers=request.headers, timeout=30)
+        response = requests.put(self.__address + request.endpoint, headers=request.headers, data="", timeout=30)
         return response
 
     def __delete(self, request: Request) -> requests.Response:
-        response = requests.delete(self.__address + request.endpoint, headers=request.headers, timeout=30)
+        response = requests.delete(self.__address + request.endpoint, headers=request.headers, data="", timeout=30)
         return response
 
     def check_connection(self) -> str:
