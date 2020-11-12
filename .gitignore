@@ -132,3 +132,5 @@ dmypy.json
 .idea
 
 main.py
+_*.py
+gimp*.py
