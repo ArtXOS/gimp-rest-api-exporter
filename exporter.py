@@ -12,14 +12,22 @@ import pygtk
 from gimpshelf import shelf
 from gimpfu import *
 
-import datetime, time, os, sys
-from random import uniform, randint
+import os, sys
 
 
 pdb = gimp.pdb
 pygtk.require('2.0')
 
 import gtk
+
+CELL_WIDTH = 200
+CELL_HEIGHT = 30
+SCROLLED_WINDOW_WIDTH = 600
+SCROLLED_WINDOW_HEIGHT = 400
+COLUMN_SPACINGS = 10
+ROW_SPACINGS = 10
+WINDOW_BORDER_WIDTH = 10
+
 
 
 class User:
@@ -90,8 +98,6 @@ class Request:
         self.headers = headers
         self.payload = payload
 
-    pass
-
 
 class API:
 
@@ -117,7 +123,7 @@ class API:
         return self.__user
 
     def do_request(self, request):
-        request.headers.update({"Authorization": self.__user.get_authorization()})
+        request.headers.update(self.__user.get_authorization())
         try:
             response = self.__method(request.method)(request)
         except requests.exceptions.ConnectionError:
@@ -128,15 +134,15 @@ class API:
         return Response(ResponseStatus(response.status_code), dict(response.headers), response.content)
 
     def __get(self, request):
-        response = requests.get(self.__host + request.endpoint, headers=request.headers, timeout=10)
+        response = requests.get(self.__host + request.endpoint, headers=request.headers, timeout=30)
         return response
 
     def __post(self, request):
-        response = requests.post(self.__host + request.endpoint, headers=request.headers, data="", timeout=30)
+        response = requests.post(self.__host + request.endpoint, headers=request.headers, data=request.payload, timeout=30)
         return response
 
     def __put(self, request):
-        response = requests.put(self.__host + request.endpoint, headers=request.headers, data="", timeout=30)
+        response = requests.put(self.__host + request.endpoint, headers=request.headers, data=request.payload, timeout=30)
         return response
 
     def __delete(self, request):
@@ -160,11 +166,11 @@ class Exporter_Window:
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_title("API exporter")
         self.window.connect("delete_event", self.delete_event)
-        self.window.set_border_width(10)
+        self.window.set_border_width(WINDOW_BORDER_WIDTH)
         
         self.layout_table = gtk.Table(10, 6, False)
-        self.layout_table.set_row_spacings(10)
-        self.layout_table.set_col_spacings(20)
+        self.layout_table.set_row_spacings(ROW_SPACINGS)
+        self.layout_table.set_col_spacings(COLUMN_SPACINGS)
         self.window.add(self.layout_table)
 
         self.widgets_setup()
@@ -172,63 +178,15 @@ class Exporter_Window:
 
         self.window.show_all()
 
-    def set_image(self, image):
-        self.image = image
-
-    def set_drawable(self, drawable):
-        self.drawable  = drawable
-
-    def valid_api(self):
-        return self.api is None or self.api.get_host() is None
-
-    def delete_event(self, widget, event, data=None):
-        gtk.main_quit()
-        return False
-
-    def empty_callback(self, widget, event):
-        pass
-
-    def connect_on_click(self, widget, event):
-        self.user = User(self.username_entry.get_text(), self.email_entry.get_text())
-        self.user.set_authorization(self.token_entry.get_text())
-        self.api = API(self.host_entry.get_text(), self.user)
-
-        connection_status = self.api.check_connection()
-
-        self.status_info.set_text(connection_status)
-
-    def save_on_click(self, widget, event):
-
-        if not self.valid_api():
-            self.textbuffer.set_text("Please, connect to host")
-            return        
-
-        file_name = self.save_as_entry.get_text()
-        file_format = ".png" if self.png_button.get_active() else ".jpg"
-        save_path = "" + file_name + file_format
-
-        if self.current_layer_button.get_active():
-            pdb.gimp_file_save(self.image, self.drawable, save_path, '?')
-        elif self.whole_bitmap_button.get_active():
-            new_image = pdb.gimp_image_duplicate(self.image)
-            new_image.flatten()
-            pdb.gimp_file_save(new_image, new_image.layers[0], save_path, '?')
-            pdb.gimp_image_delete(new_image)
-
-        self.textbuffer.set_text("Saved " + "\"" + save_path + "\"")
-
-        os.remove(save_path)    
-
-    
     def widgets_setup(self):
-
+    
         self.username_label = gtk.Label("Username:")
         self.username_entry = gtk.Entry()
-        self.username_entry.set_size_request(200, 30)
+        self.username_entry.set_size_request(CELL_WIDTH, CELL_HEIGHT)
 
         self.email_label = gtk.Label("Email:")
         self.email_entry = gtk.Entry()
-        self.email_entry.set_size_request(200, 30)
+        self.email_entry.set_size_request(CELL_WIDTH, CELL_HEIGHT)
 
         self.host_label = gtk.Label("Host:")
         self.host_entry = gtk.Entry()
@@ -259,19 +217,19 @@ class Exporter_Window:
         self.jpg_button = gtk.RadioButton(self.png_button, "JPG")
         self.jpg_button.connect("toggled", self.empty_callback, "Whole bitmap")
 
-        self.save_button = gtk.Button("Save")
-        self.save_button.connect("clicked", self.save_on_click, "Connect")
+        self.export_button = gtk.Button("Export")
+        self.export_button.connect("clicked", self.export_on_click, "Export")
 
-        self.save_as_entry = gtk.Entry()
-        self.save_as_entry.set_text("Enter the name")
+        self.export_as_entry = gtk.Entry()
+        self.export_as_entry.set_text("Enter the name")
 
         self.text_panel = gtk.TextView() 
         self.textbuffer = self.text_panel.get_buffer()
 
-        self.sw = gtk.ScrolledWindow()
-        self.sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        self.sw.set_size_request(600,400)
-        self.sw.add(self.text_panel)
+        self.scrolled_window = gtk.ScrolledWindow()
+        self.scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.scrolled_window.set_size_request(SCROLLED_WINDOW_WIDTH, SCROLLED_WINDOW_HEIGHT)
+        self.scrolled_window.add(self.text_panel)
 
     def layout_table_setup(self):
         self.layout_table.attach(self.username_label, 0, 1, 0, 1)
@@ -294,7 +252,7 @@ class Exporter_Window:
         self.layout_table.attach(self.status_label, 4, 5, 3, 4)
         self.layout_table.attach(self.status_info, 5, 6, 3, 4)
 
-        self.layout_table.attach(self.sw, 0, 6, 4, 8)
+        self.layout_table.attach(self.scrolled_window, 0, 6, 4, 8)
 
         self.layout_table.attach(self.current_layer_button, 0, 1, 8, 9)
         self.layout_table.attach(self.whole_bitmap_button, 1, 2, 8, 9)
@@ -302,14 +260,90 @@ class Exporter_Window:
         self.layout_table.attach(self.png_button, 4, 5, 8, 9)
         self.layout_table.attach(self.jpg_button, 5, 6, 8, 9)
 
-        self.layout_table.attach(self.save_button, 0, 1, 9, 10)
-        self.layout_table.attach(self.save_as_entry, 1, 6, 9, 10)
+        self.layout_table.attach(self.export_button, 0, 1, 9, 10)
+        self.layout_table.attach(self.export_as_entry, 1, 6, 9, 10)
+
+    def set_image(self, image):
+        self.image = image
+
+    def set_drawable(self, drawable):
+        self.drawable  = drawable
+
+    def valid_api(self):
+        if self.api is None or self.api.get_host() is None:
+            return False
+
+        host = self.api.get_host().lower()
+
+        if not host.startswith("http://") and not host.startswith("https://"):
+            self.textbuffer.set_text("Host name should start with \"http://\" or \"https://")
+            return False
+
+        return True
+
+    def delete_event(self, widget, event, data=None):
+        gtk.main_quit()
+        return False
+
+    def empty_callback(self, widget, event):
+        pass
+
+    def connect_on_click(self, widget, event):
+
+        username = self.username_entry.get_text()
+        user_email = self.email_entry.get_text()
+        user_token = self.token_entry.get_text()
+        host = self.host_entry.get_text()
+
+        self.user = User(username, user_email)
+        self.user.set_authorization({"Authorization": "Bearer " + user_token})
+
+        self.api = API(host, self.user)
+
+        if not self.valid_api():
+            return
+
+        self.status_info.set_text("Here")
+        connection_status = self.api.check_connection()
+
+        self.status_info.set_text(connection_status)
+
+    def export_on_click(self, widget, event):
+
+        if not self.valid_api():
+            self.textbuffer.set_text("Please, connect first")
+            return        
+
+        file_name = self.export_as_entry.get_text()
+        if not file_name:
+            self.textbuffer.set_text("File name is empty")
+            return
+
+        file_format = ".png" if self.png_button.get_active() else ".jpg"
+        file_path  = os.path.join("", file_name + file_format)
+
+        if self.current_layer_button.get_active():
+            pdb.gimp_file_save(self.image, self.drawable, file_path, '?')
+        elif self.whole_bitmap_button.get_active():
+            new_image = pdb.gimp_image_duplicate(self.image)
+            new_image.flatten()
+            pdb.gimp_file_save(new_image, new_image.layers[0], file_path, '?')
+            pdb.gimp_image_delete(new_image)
+
+        self.textbuffer.set_text("Exporting..." + file_path)
+
+        endpoint = self.endpoint_entry.get_text()
+        file = open(file_path, "rb")
+        request = Request(method="POST", endpoint=endpoint, headers={}, payload={'texture': (file_name, file, 'multipart/form-data')})
+        response = api.do_request(request)
+
+        os.remove(file_path) 
+
+        self.textbuffer.set_text(self.textbuffer.get_text() + "\n\n\n" + str(response.payload))
+        self.status_info.set_text(response.response_status.message)   
 
 class GimpExporter(gimpplugin.plugin):
     
-    action = None
-    layer = None
-
     def start(self):
         gimp.main(self.init, self.quit, self.query, self._run)
 
@@ -321,7 +355,7 @@ class GimpExporter(gimpplugin.plugin):
 
     def query(self):
         gimp.install_procedure(
-            "test_api",
+            "export_to_api",
             "GIMP to API export plugin",
             "Export layer all the whole image to your API.",
             "Illia Brylov",
@@ -338,10 +372,7 @@ class GimpExporter(gimpplugin.plugin):
             []
         )
 
-    def get_exporter_name(self):
-        pass
-
-    def test_api(self, run_mode, image, drawable):
+    def export_to_api(self, run_mode, image, drawable):
         self.image = image
         self.drawable = drawable
         gimp.pdb.gimp_image_undo_group_start(self.image)
