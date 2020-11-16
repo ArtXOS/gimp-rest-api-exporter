@@ -79,8 +79,6 @@ class Response:
         self.headers = headers
         self.payload = payload
 
-    pass
-
 
 class Request:
     method = None
@@ -356,7 +354,7 @@ class GimpExporter(gimpplugin.plugin):
         gimp.install_procedure(
             "export_to_api",
             "GIMP to API export plugin",
-            "Export layer all the whole image to your API.",
+            "Export layer or the whole image to your API.",
             "Illia Brylov",
             "Illia Brylov",
             "2020",
