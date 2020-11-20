@@ -1,0 +1,35 @@
+== gimp-rest-api-exporter
+
+Export to RESTfull API plugin for GIMP.
+
+IMPORTANT: Under development
+
+=== Short user manual:
+
+.Simple usage wihout authorization:
+. Enter the hostname
+. Click the connect button
+. Enter the endpoint
+. Choose what will be exported and preferable format
+. Enter the name
+. Click export and wait for the response
+
+TIP: Plugin is using POST request by default. You can change it directly in source code.
+
+image::./doc/plugin_ui.png[300 ,400, align="center"]
+
+.UI elements:
+* Username: your username, which can be added to request body or headers. `Not used by default`.
+* Email: your email, which can be added to request body or headers. `Not used by default`.
+* Token: your token. `Be default is Bearer token`.  Just enter your token without "Bearer" prefix.
+* Host: hostname of the server, where the request will be sent. `Should start with "http://" or "https://"`.
+* Connect button: when clicked, plugin will check, if there are any responses from the server. If there were a response, Status will change to `Connected successfully`, to `Connection refused` if not.
+* Status: placeholder for short response status. HTTP response code and small message.
+* Endpoint: request endpoint. (Check your API docs).
+* Response scrolled window: place, where response body will be shown.
+* Radio buttons: you can export current layer, or the whole bitmap of your project. `When exporting whole bitmap, the result of 'merge visible layers' will be exported`.
+* Format radio button: choose the preferable file format. PNG and JPG will be created with default values.
+* File name: choose the name for the image, which be exported.
+* Export button: will send a request to an endpoint with the image in request body and optional headers added `You should be connected`.
+
+
