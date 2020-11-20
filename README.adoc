@@ -2,9 +2,10 @@
 
 Export to RESTfull API plugin for GIMP.
 
-WARNING: Under development
+IMPORTANT: Under development
 
 === Short user manual:
+
 .Simple usage wihout authorization:
 . Enter the hostname
 . Click the connect button
@@ -12,6 +13,8 @@ WARNING: Under development
 . Choose what will be exported and preferable format
 . Enter the name
 . Click export and wait for the response
+
+TIP: Plugin is using POST request by default. You can change it directly in source code.
 
 image::./doc/plugin_ui.png[300 ,400, align="center"]
 
