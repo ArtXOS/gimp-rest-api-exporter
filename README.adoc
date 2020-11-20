@@ -1,8 +1,8 @@
-== gimp-rest-api-exporter
+= gimp-rest-api-exporter
 
 Export to RESTfull API plugin for GIMP.
 
-IMPORTANT: Under development
+IMPORTANT: Under development. Tested on WIN10, GIMP 2.10.22. export.py was added to %AppData%\GIMP\2.10\plug-ins folder
 
 === Short user manual:
 
