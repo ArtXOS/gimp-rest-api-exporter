@@ -131,12 +131,12 @@ class API:
         return response
 
     def __post(self, request):
-        response = requests.post(self.__host + request.endpoint, headers=request.headers, data=request.payload,
+        response = requests.post(self.__host + request.endpoint, headers=request.headers, files=request.payload,
                                  timeout=30)
         return response
 
     def __put(self, request):
-        response = requests.put(self.__host + request.endpoint, headers=request.headers, data=request.payload,
+        response = requests.put(self.__host + request.endpoint, headers=request.headers, files=request.payload,
                                 timeout=30)
         return response
 
