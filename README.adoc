@@ -1,8 +1,13 @@
-== gimp-rest-api-exporter
+= gimp-rest-api-exporter
 
 Export to RESTfull API plugin for GIMP.
 
-IMPORTANT: Under development
+IMPORTANT: Under development. Tested on WIN10, GIMP 2.10.22. export.py was added to %AppData%\GIMP\2.10\plug-ins folder
+
+.Instalation:
+. Required version of GIMP is 2.10.22
+. Put the exporter.py to the GIMP's plugins folder (if it doesnt work, put the script to %AppData%\GIMP\2.10\plug-ins folder)
+. Check the execution rights of exporter.py 
 
 === Short user manual:
 
@@ -14,7 +19,11 @@ IMPORTANT: Under development
 . Enter the name
 . Click export and wait for the response
 
-TIP: Plugin is using POST request by default. You can change it directly in source code.
+TIP: Some UI and Request settings are at the beggining. Feel free to change them
+
+TIP: Plugin uses **POST** request for an export by default. You can change it by setting **EXPORT_HTTP_METHOD** variable. Also you can change the behavior of your Export by editing **export_on_click** callback function (for example by adding additional headers to your request or by changing the structure of the payload with the file for exporting)
+
+TIP: You can also change the authorization simply by calling **set_authorization** method of User object in **connect_on_click** callback function. Method expects to take a dictionary as argument f.e. "{"Authorization": ... }". This dictionary will be added as an additional header to your request
 
 image::./doc/plugin_ui.png[300 ,400, align="center"]
 
@@ -28,8 +37,8 @@ image::./doc/plugin_ui.png[300 ,400, align="center"]
 * Endpoint: request endpoint. (Check your API docs).
 * Response scrolled window: place, where response body will be shown.
 * Radio buttons: you can export current layer, or the whole bitmap of your project. `When exporting whole bitmap, the result of 'merge visible layers' will be exported`.
-* Format radio button: choose the preferable file format. PNG and JPG will be created with default values.
+* Format radio buttons: choose the preferable file format. PNG or JPG will be created with default values.
 * File name: choose the name for the image, which be exported.
-* Export button: will send a request to an endpoint with the image in request body and optional headers added `You should be connected`.
+* Export button: will send a request to an endpoint with the image in request body and optional headers added `You have to connect first`.
 
 
