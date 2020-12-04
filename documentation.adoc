@@ -1,0 +1,219 @@
+= gimp-rest-api-exporter
+
+Export to RESTfull API plugin for GIMP. You can use this plugin to make faster the process of sending images to your server, after they've been edited. You can export current layer or the whole project as final raster image. This plugin provides export in two formats: pgn and jpg. Plugin creates tmp png/jpg file, then sends it to the server. After receiving a response, prints a response body to UI and changes the status label. Also plugin can be used with authorized requests. By default it uses Bearer token (you have to fill token entry without Bearer prefix)
+
+IMPORTANT: Under development. Tested on WIN10, GIMP 2.10.22. export.py was added to %AppData%\GIMP\2.10\plug-ins folder
+
+IMPORTANT: Find the APIexport in upper menu bar. It will be active, if you have at least one layer in your project
+
+image::./doc/menu.png[700 ,700, align="center"]
+
+.Instalation:
+. Required version of GIMP is 2.10.22
+. Put the exporter.py to the GIMP's plugins folder (if it doesnt work, put the script to %AppData%\GIMP\2.10\plug-ins folder)
+. Check the execution rights of exporter.py 
+
+=== Short user manual:
+
+.Simple usage wihout authorization:
+. Find APIexport in the upper menu bar
+. Enter the hostname
+. Click the connect button
+. Enter the endpoint
+. Choose what will be exported and preferable format
+. Enter the name
+. Click export and wait for the response
+
+TIP: Some UI and Request settings are at the beginning. Feel free to change them
+
+TIP: In **export_on_click** function you can change the way how the payload will be filled. F.e. you don't want your file to be sent with a key "texture", so you can change it
+
+TIP: Plugin uses **POST** request for an export by default. You can change it by setting **EXPORT_HTTP_METHOD** variable. Also you can change the behavior of your Export by editing **export_on_click** callback function (for example by adding additional headers to your request or by changing the structure of the payload with the file for exporting)
+
+TIP: You can also change the authorization simply by calling **set_authorization** method of User object in **connect_on_click** callback function. Method expects to take a dictionary as argument f.e. "{"Authorization": ... }". This dictionary will be added as an additional header to your request
+
+image::./doc/plugin_ui.png[300 ,400, align="center"]
+
+.UI elements:
+* Username: your username, which can be added to request body or headers. `Not used by default`.
+* Email: your email, which can be added to request body or headers. `Not used by default`.
+* Token: your token. `Be default is Bearer token`.  Just enter your token without "Bearer" prefix.
+* Host: hostname of the server, where the request will be sent. `Should start with "http://" or "https://"`.
+* Connect button: when clicked, plugin will check, if there are any responses from the server. If there were a response, Status will change to `Connected successfully`, to `Connection error` if not.
+* Status: placeholder for short response status. HTTP response code and small message.
+* Endpoint: request endpoint. (Check your API docs).
+* Response scrolled window: place, where response body will be shown.
+* Radio buttons: you can export current layer, or the whole bitmap of your project. `When exporting whole bitmap, the result of 'merge visible layers' will be exported`.
+* Format radio buttons: choose the preferable file format. PNG or JPG will be created with default values.
+* File name: choose the name for the image, which be exported.
+* Export button: will send a request to an endpoint with the image in request body and optional headers added `You have to connect first`.
+
+=== Example of exporting process: TODO
+(test server is currently unreachable)
+
+=== Advanced section:
+
+Some interesting parts of the project
+
+#### export_on_click()
+
+Callback function, which provides export procedure
+
+[source,python]
+----
+    def export_on_click(self, widget, event):
+        """
+        Export button callback which provides the export of the file to the API. Saves current layer or
+        whole bitmap with a given name based on preferences. Creates the Request object with needed data filled, adds
+        the image file to payload and calls api's do_request method with method defined in EXPORT_HTTP_METHOD variable.
+        When the Request sent, removes temporary image file.
+        When the Response object recieved, changes tha status label, prints the Response content to scrolled_window.
+        :param widget: widget
+        :param event: event
+        :return: None
+        """
+
+        # check if the exporter api object is valid
+        if not self.valid_api():
+            self.textbuffer.set_text("Please, connect first")
+            return
+        
+        # get the file name from UI file name entry
+        file_name = self.export_as_entry.get_text()
+        
+        # checking if the file name is empty
+        if not file_name:
+            self.textbuffer.set_text("File name is empty")
+            return
+        
+        # get the preferable file format
+        file_format = ".png" if self.png_button.get_active() else ".jpg"
+        file_name = file_name + file_format
+        
+        # saving a current layer or the whole project to tmp png/jpg file using
+        # pdb functionality
+        if self.current_layer_button.get_active():
+            pdb.gimp_file_save(self.image, self.drawable, file_name, '?')
+        elif self.whole_bitmap_button.get_active
+            # when saving a whole project it creates a duplicate
+            new_image = pdb.gimp_image_duplicate(self.image)
+            new_image.flatten()
+            pdb.gimp_file_save(new_image, new_image.layers[0], file_name, '?')
+            pdb.gimp_image_delete(new_image)
+
+        self.textbuffer.set_text("Exporting... " + file_name)
+        
+        # setting up part for Request object
+        endpoint = self.endpoint_entry.get_text()
+        headers = {}
+        file = open(file_name, "rb")
+        payload = {"texture": ((file_name, file), "multipart/form-data")}
+        
+        request = Request(method=EXPORT_HTTP_METHOD, endpoint=endpoint, headers=headers, payload=payload)
+        
+        # sending request
+        response = self.api.do_request(request)
+        
+        # removing tmp file
+        file.close()
+        os.remove(file_name)
+        
+        # informing user about the result
+        self.textbuffer.set_text(response.payload)
+        self.status_info.set_text(response.response_status.message)
+
+----
+
+### API class
+
+Class which helps to communicate with the server
+
+[source,python]
+----
+    class API:
+    """
+    API class is used to communicate with external API. It has a method to do the Request to receive the Response
+
+    __host: host string https://google.com f.e.
+    """
+    __host = None
+
+    def __init__(self, host, user):
+        self.__host = host
+        self.__user = user
+
+    def __method(self, method):
+        """
+        Private method to return private method of each HTTP method. Used for the Request processing
+        :param method: HTTP method as uppercase string
+        :return: private method as function object
+        """
+        methods = {
+            "GET": self.__get,
+            "POST": self.__post,
+            "PUT": self.__put,
+            "DELETE": self.__delete
+        }
+        return methods[method]
+
+    def get_host(self):
+        return self.__host
+
+    def get_user(self):
+        return self.__user
+
+    def do_request(self, request):
+        """
+        This method updates Request object headers with User authorization and then calls the HTTP method, based on
+        Request object method attribute. Handles possible exceptions. In case of an exception, Response object
+        will contain only ResponseStatus with a message about an error
+        :param request: Request object filled with data
+        :return: Response object filled with data
+        """
+
+        request.headers.update(self.__user.get_authorization())
+
+        try:
+            response = self.__method(request.method)(request)
+        except requests.exceptions.ConnectionError:
+            return Response(ResponseStatus(1000), "", "")
+        except requests.exceptions.ReadTimeout:
+            return Response(ResponseStatus(2000), "", "")
+        except Exception:
+            return Response(ResponseStatus(3000), "", "")
+
+        return Response(ResponseStatus(response.status_code), response.headers, response.content)
+
+    def __get(self, request):
+        response = requests.get(self.__host + request.endpoint, headers=request.headers, timeout=TIMEOUT)
+        return response
+
+    def __post(self, request):
+        response = requests.post(self.__host + request.endpoint, headers=request.headers, files=request.payload,
+                                 timeout=TIMEOUT)
+        return response
+
+    def __put(self, request):
+        response = requests.put(self.__host + request.endpoint, headers=request.headers, files=request.payload,
+                                timeout=TIMEOUT)
+        return response
+
+    def __delete(self, request):
+        response = requests.delete(self.__host + request.endpoint, headers=request.headers, timeout=TIMEOUT)
+        return response
+
+    def check_connection(self):
+        """
+        Method that checks if there is any response from host
+        :return: Connected successfully if there was any response from the host, Connection error if not
+        """
+        response = self.do_request(Request("GET", "", {}, {}))
+
+        if response.response_status.code < 600:
+            return "Connected successfully"
+        else:
+            return "Connection error"
+----
+
+=== Author:
+Illia Brylov @ArtXOS

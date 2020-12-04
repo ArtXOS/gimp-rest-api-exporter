@@ -104,7 +104,7 @@ class ResponseStatus:
     def __init__(self, code):
         """
         If the code number is absent in internal dictionary, the generic message will be assigned
-        :param code:
+        :param code: HTTP response code
         """
         self.code = code
         self.message = ResponseStatus.messages[code]
